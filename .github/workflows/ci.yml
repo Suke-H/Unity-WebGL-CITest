@@ -23,18 +23,13 @@ jobs:
           fetch-depth: 0
           lfs: true          # Git LFS を使っている場合
 
-      # Decompression Fallback を有効化してブラウザ側で解凍させる
-      - name: Enable Decompression Fallback
-        run: |
-          sed -i 's/WebGLLinkerTarget: 0/WebGLLinkerTarget: 1/' ProjectSettings/ProjectSettings.asset
-          sed -i 's/DecompressionFallback: 0/DecompressionFallback: 1/' ProjectSettings/ProjectSettings.asset
-      
       # Library フォルダをキャッシュ
+      # Assets / Packages に変更があればキャッシュを破棄して再インポート
       - name: Cache Unity Library
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**') }}
           restore-keys: Library-
 
       # Unity ライセンスのアクティベーション + ビルド
@@ -51,14 +46,26 @@ jobs:
           buildsPath: build
           allowDirtyBuild: true
 
-      # ビルド成果物を GitHub Actions Artifacts に保存
+      # unityroom 用 Artifact（GZip）
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: WebGL-Build-${{ github.sha }}
           path: build/WebGL/WebGL
           retention-days: 14
-          if-no-files-found: error   
+          if-no-files-found: error
+
+      # GitHub Pages 用に .gz → .unityweb にリネームしてデプロイ
+      # Decompression Fallback を有効化してブラウザ側で解凍させる
+      - name: Prepare build for GitHub Pages
+        run: |
+          cp -r build/WebGL/WebGL pages_build
+          # .gz → .unityweb にリネーム
+          find pages_build -name "*.gz" | while read f; do
+            mv "$f" "${f%.gz}.unityweb"
+          done
+          # loader.js 内の拡張子参照も書き換え
+          find pages_build -name "*.js" | xargs sed -i 's/\.gz/\.unityweb/g'
 
       # GitHub Pages へデプロイ
       # https://github.com/peaceiris/actions-gh-pages
@@ -66,6 +73,6 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/WebGL/WebGL  # Artifacts と同じパス
+          publish_dir: pages_build
           # カスタムドメインを使う場合は以下を有効化
           # cname: your-custom-domain.com
