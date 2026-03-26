@@ -1,0 +1,56 @@
+name: Unity WebGL Build + Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# GitHub Pages へのデプロイ権限
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Unity WebGL
+    runs-on: ubuntu-latest
+
+    steps:
+      # ソースコードのチェックアウト
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true          # Git LFS を使っている場合
+
+      # Unity ライセンスのアクティベーション + ビルド
+      # https://game.ci/docs/github/activation
+      - name: Build project (WebGL)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE:  ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL:    ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: auto    # ProjectSettings から自動検出
+          targetPlatform: WebGL
+          buildsPath: build
+
+      # ビルド成果物を GitHub Actions Artifacts に保存
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebGL-Build-${{ github.sha }}
+          path: build/WebGL/WebGL
+          retention-days: 14
+          if-no-files-found: error   
+
+      # GitHub Pages へデプロイ
+      # https://github.com/peaceiris/actions-gh-pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/WebGL/WebGL  # Artifacts と同じパス
+          # カスタムドメインを使う場合は以下を有効化
+          # cname: your-custom-domain.com
