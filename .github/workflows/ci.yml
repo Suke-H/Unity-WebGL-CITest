@@ -23,6 +23,20 @@ jobs:
           fetch-depth: 0
           lfs: true          # Git LFS を使っている場合
 
+      # Decompression Fallback を有効化してブラウザ側で解凍させる
+      - name: Enable Decompression Fallback
+        run: |
+          sed -i 's/WebGLLinkerTarget: 0/WebGLLinkerTarget: 1/' ProjectSettings/ProjectSettings.asset
+          sed -i 's/DecompressionFallback: 0/DecompressionFallback: 1/' ProjectSettings/ProjectSettings.asset
+      
+      # Library フォルダをキャッシュ
+      - name: Cache Unity Library
+        uses: actions/cache@v3
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: Library-
+
       # Unity ライセンスのアクティベーション + ビルド
       # https://game.ci/docs/github/activation
       - name: Build project (WebGL)
