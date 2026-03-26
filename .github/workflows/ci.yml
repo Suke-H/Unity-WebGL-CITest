@@ -31,7 +31,7 @@ jobs:
       
       # Library フォルダをキャッシュ
       - name: Cache Unity Library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: Library
           key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
@@ -46,9 +46,10 @@ jobs:
           UNITY_EMAIL:    ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          unityVersion: auto    # ProjectSettings から自動検出
+          unityVersion: auto
           targetPlatform: WebGL
           buildsPath: build
+          allowDirtyBuild: true
 
       # ビルド成果物を GitHub Actions Artifacts に保存
       - name: Upload build artifact
